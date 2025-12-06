@@ -2,7 +2,7 @@
 title: "TAREA PC1"
 format: html
 editor: visual
-autor: BRUNO BAUTISTA
+autor: Ponce Martinez, Maricielo Jasmin
 ---
 
 ## TAREA FUNCIONES R Y PAQUETES
@@ -71,3 +71,4 @@ sum(diabetes$edad)
 ```{r}
 table(diabetes$glucosa_2h)
 ```
+
