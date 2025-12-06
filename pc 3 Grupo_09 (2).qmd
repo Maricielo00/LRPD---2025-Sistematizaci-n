@@ -6,7 +6,7 @@ editor: visual
 
 # **PC 3**
 
-NOMBRE: Bautista Benites Bruno Edgar
+NOMBRE: Ponce Martinez Maricielo 
 
 DOCENTE: Dr. Castro López Segundo Vicente
 
@@ -399,3 +399,4 @@ tidy(modelo_logistico, exponentiate = TRUE, conf.int = TRUE)
 ```
 
 Los resultados muestran que Edad, IMC y Glucosa a las 2 horas se asocian significativamente con un mayor riesgo de diabetes. A medida que aumentan estas variables, también se incrementa la probabilidad de presentar un resultado positivo. En cambio, Presión sanguínea no mostró una relación significativa con la diabetes a 5 años.
+
