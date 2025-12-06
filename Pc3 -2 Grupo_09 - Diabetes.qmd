@@ -6,7 +6,7 @@ editor: visual
 
 # **PC 3 - Actividad 2**
 
-NOMBRE: Bautista Benites Bruno Edgar
+NOMBRE: Ponce Martinez, Maricielo Jasmin
 
 DOCENTE: Dr. Castro López Segundo Vicente
 
@@ -512,3 +512,4 @@ A pesar de incluirlas en el modelo, no mostraron asociación independiente:
 
 En estos casos, los valores p altos indican que no aportan evidencia de efecto propio cuando la glucosa, el IMC continuo y el historial ya están en el modelo.\
 Esto sugiere que parte del efecto de edad y IMC categórico queda absorbido por variables más informativas (como IMC continuo y glucosa).
+
