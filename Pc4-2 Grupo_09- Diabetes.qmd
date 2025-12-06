@@ -6,7 +6,7 @@ editor: visual
 
 # **PC 4 - Actividad 2**
 
-NOMBRE: Bautista Benites Bruno Edgar
+NOMBRE:Ponce Martinez, Maricielo Jasmin
 
 DOCENTE: Dr. Castro López Segundo Vicente
 
@@ -408,3 +408,4 @@ head(diabetes_final)
 ```
 
 Aplicando la función head() al dataframe diabetes_final que acabamos de crear con todos los valores faltantes imputados.
+
