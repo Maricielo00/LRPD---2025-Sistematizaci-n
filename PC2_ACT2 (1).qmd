@@ -1,0 +1,194 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+# **Semana 07: Bondad de ajuste**
+
+## Cargamos los paquetes necesarios
+
+```{r}
+library(rio)
+library(here)
+```
+
+## Cargar los datos
+
+```{r}
+data_diabetes <- import(here("data", "diabetes.csv"))
+```
+
+## Analizamos y diferenciamos los datos numericos/continuos y categoricos
+
+```{r}
+str(data_diabetes)
+```
+
+# 1.Datos continuos
+
+Para comprobar si las variables continuas siguen una distribución normal, se aplicó la prueba de Shapiro–Wilk, mediante la función `shapiro.test()` en R.\
+Esta prueba contrasta la hipótesis nula de que los datos provienen de una distribución normal. Si el valor de *p* es menor que 0.05, se rechaza la hipótesis nula, concluyendo que la variable no sigue una distribución normal.
+
+## 1.1 Variable: `imc`
+
+Esta variable representa el **Índice de Masa Corporal (IMC)** de los participantes, expresado en kg/m²
+
+```{r}
+shapiro.test(data_diabetes$imc)
+```
+
+En este caso, el resultado obtenido fue W = 0.97955 y p = 8.558e-09.\
+Dado que el valor de p es menor que 0.05, [se rechaza la hipótesis nula.]{.underline}
+
+## 1.2 Variable: `glucosa_2h`
+
+Corresponde a la medición de glucosa plasmática a las 2 horas de una prueba de tolerancia oral a la glucosa, expresada en mg/dL.
+
+```{r}
+shapiro.test(data_diabetes$glucosa_2h)
+```
+
+El resultado fue W = 0.96964 y p = 1.72e-11.\
+Como el valor de p es menor que 0.05, se rechaza la hipótesis nula.
+
+## 1.3 Variable: `insulina_2h`
+
+Esta variable corresponde a los niveles de insulina en suero medidos a las 2 horas después de una carga oral de glucosa, expresados en µU/mL. Es una variable continua que refleja la respuesta pancreática a la glucosa.
+
+```{r}
+shapiro.test(data_diabetes$insulina_2h)
+```
+
+El resultado obtenido fue W = 0.8041 y p \< 2.2e-16.\
+Dado que el valor de p es mucho menor que 0.05, se rechaza la hipótesis nula.
+
+## 1.4 Variable: `pliegue_triceps`
+
+```{r}
+shapiro.test(data_diabetes$pliegue_triceps)
+```
+
+El resultado fue W = 0.968 y p = 1.776e-09. Dado que el valor de p es menor que 0.05, se rechaza la hipótesis nula.
+
+## 1.5 Variable: `presion_sanguinea`
+
+```{r}
+shapiro.test(data_diabetes$presion_sanguinea)
+```
+
+El resultado fue W = 0.99031 y p = 9.451e-05. Como el valor de p es menor que 0.05, se rechaza la hipótesis nula.
+
+## 1.6 Variable: `edad`
+
+```{r}
+shapiro.test(data_diabetes$edad)
+```
+
+El resultado fue W = 0.87477 y p \< 2.2e-16. Dado que el valor de p es menor que 0.05, se rechaza la hipótesis nula
+
+## 1.7 Variable: `historial_diabetes`
+
+```{r}
+shapiro.test(data_diabetes$historial_diabetes)
+```
+
+El resultado fue W = 0.83652 y p \< 2.2e-16. Como el valor de p es mucho menor que 0.05, se rechaza la hipótesis nula.
+
+## Conclusión general
+
+En todas las variables analizadas, los valores de p fueron menores que 0.05, lo que indica que ninguna de las variables continuas presenta una distribución normal.
+
+## Como complemento
+
+Para evaluar la normalidad de la variables, se aplicó la prueba de Shapiro–Wilk en R. Adicionalmente, se generó un histograma con curva de densidad mediante el paquete **ggplot2**, lo que permite observar la forma de la distribución.
+
+Esta observación gráfica complementa la interpretación de la prueba estadística de normalidad.
+
+```{r}
+library(ggplot2)
+# Glucosa a las 2h
+ggplot(data_diabetes, aes(x = glucosa_2h)) +
+  geom_histogram(aes(y = ..density..), bins = 30, color = "black") +
+  geom_density() +
+  labs(x = "Glucosa (mg/dL, 2h)", y = "Densidad") +
+  theme_minimal()
+
+# Presión sanguínea
+ggplot(data_diabetes, aes(x = presion_sanguinea)) +
+  geom_histogram(aes(y = ..density..), bins = 30, color = "black") +
+  geom_density() +
+  labs(x = "Presión sanguínea (mmHg)", y = "Densidad") +
+  theme_minimal()
+
+# Pliegue del tríceps
+ggplot(data_diabetes, aes(x = pliegue_triceps)) +
+  geom_histogram(aes(y = ..density..), bins = 30, color = "black") +
+  geom_density() +
+  labs(x = "Pliegue del tríceps (mm)", y = "Densidad") +
+  theme_minimal()
+
+# Insulina a las 2h
+ggplot(data_diabetes, aes(x = insulina_2h)) +
+  geom_histogram(aes(y = ..density..), bins = 30, color = "black") +
+  geom_density() +
+  labs(x = "Insulina (µU/mL, 2h)", y = "Densidad") +
+  theme_minimal()
+
+# IMC
+ggplot(data_diabetes, aes(x = imc)) +
+  geom_histogram(aes(y = ..density..), bins = 30, color = "black") +
+  geom_density() +
+  labs(x = "IMC (kg/m²)", y = "Densidad") +
+  theme_minimal()
+
+# Historial de diabetes
+ggplot(data_diabetes, aes(x = historial_diabetes)) +
+  geom_histogram(aes(y = ..density..), bins = 30, color = "black") +
+  geom_density() +
+  labs(x = "Historial de diabetes (años)", y = "Densidad") +
+  theme_minimal()
+
+# Edad
+ggplot(data_diabetes, aes(x = edad)) +
+  geom_histogram(aes(y = ..density..), bins = 30, color = "black") +
+  geom_density() +
+  labs(x = "Edad (años)", y = "Densidad") +
+  theme_minimal()
+```
+
+# 2. Para datos categóricos
+
+El dataset empleado contiene información sobre el estado diagnóstico de diabetes mellitus tipo 2, clasificado en dos categorías:
+
+“positivo”, que representa a las personas diagnosticadas con diabetes, y “negativo”, que agrupa a quienes no presentan la enfermedad.
+
+En esta muestra, la distribución fue la siguiente:
+
+```{r}
+table(data_diabetes$diabetes_5a)
+```
+
+Para evaluar si la proporción observada de personas con diagnóstico positivo de diabetes difiere significativamente de la proporción esperada según la literatura, se utilizó la prueba de bondad de ajuste de Chi-cuadrado.
+
+Un metaanálisis reciente sobre la prevalencia de diabetes en el Perú reportó una prevalencia estimada de **5,9%** (IC95%: 3,98%–8,17%). Este valor se tomó como proporción esperada para comparar con la proporción observada en nuestra muestra.
+
+DOI: <https://doi.org/10.1101/2024.05.21.24307705>
+
+Las hipótesis de la prueba son:
+
+-   **H₀ (hipótesis nula):** No existe diferencia significativa entre las proporciones observadas y esperadas.
+
+-   **H₁ (hipótesis alternativa):** Existe una diferencia significativa entre ambas proporciones.
+
+```{r}
+chisq.test(x = c(500, 268), p = c(0.941, 0.059))
+```
+
+El resultado del análisis muestra que el valor de Chi-cuadrado es 1163 con 1 grado de libertad, y un valor p \< 2.2e-16, el cual es mucho menor que 0.05.
+
+### **Interpretación:**
+
+Dado que el valor de p es mucho menor que 0.05, *se rechaza la hipótesis nula (H₀),* que planteaba que las proporciones observadas y esperadas no difieren significativamente.
+
+Esto indica que la proporción observada de participantes con diagnóstico positivo de diabetes (34.9%) difiere significativamente de la proporción esperada (5.9%)

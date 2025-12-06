@@ -1,0 +1,359 @@
+---
+title: "Métodos de agrupamiento usando Machine Learning"
+format: html
+---
+
+# **Actividad usando la data del repositorio 13**
+
+### Instalar y cargar los paquetes
+
+```{r}
+install.packages("factoextra")
+install.packages("cluster")
+```
+
+```{r}
+library(factoextra)
+library(cluster)
+library(here)
+library(rio)
+library(tidyverse)
+```
+
+# 1 Análisis de agrupamiento herarquico (Hierarchical Clustering)
+
+## 1.1 Sobre el problema para esta sesión
+
+El objetivo de este ejercicio es aplicar el método de agrupamiento jerárquico para identificar grupos de pacientes que compartan características similares en cuanto a su estado de salud basal, lo que permitirá proponer posibles categorías de riesgo o patrones clínicos diferenciados.
+
+## 1.2 El dataset para esta sesión
+
+Para ilustrar el proceso de análisis usaremos el dataset llamado `hemo_data` el cual contiene 160 observaciones.
+
+### 1.2.1 Importando los datos
+
+```{r}
+hemo_data <- import(here("data", "s13_hemodialisis.csv"))
+```
+
+El código utilizado importa la base de datos *s13_hemodialisis.csv* al entorno de trabajo de R. Para ello, la función `here()` se encarga de ubicar correctamente el archivo dentro de la carpeta del proyecto, evitando errores por rutas mal definidas. Luego, mediante `import()`, el contenido del archivo es leído y convertido en un objeto tipo data frame. De esta manera, toda la información clínica y analítica de los pacientes queda almacenada en el objeto `hemo_data`, listo para su análisis estadístico posterior.
+
+## 1.3 Preparación de los datos
+
+### 1.3.1 Solo datos numéricos
+
+```{r}
+hemo_data_1 = hemo_data |> 
+  select(-Sexo, -Enfermedad_Renal) |> 
+  column_to_rownames("id")
+```
+
+En este bloque, se genera un nuevo conjunto de datos llamado `hemo_data_1` a partir del archivo original. Primero, se eliminan las variables *Sexo* y *Enfermedad_Renal*, probablemente porque no se usarán en los análisis posteriores o porque se busca trabajar solo con variables numéricas. Luego, se transforma la columna `id` en el nombre de las filas mediante `column_to_rownames()`. Con esto, cada registro queda identificado por su propio código de paciente, lo que facilita procedimientos como análisis multivariados o matrices de distancia.
+
+### 1.3.2 La importancia de estandarizar
+
+```{r}
+hemo_data_escalado = scale(hemo_data_1)
+```
+
+En esta línea, el objeto `hemo_data_1` es estandarizado mediante la función `scale()`, generando una nueva base llamada `hemo_data_escalado`. Este procedimiento convierte todas las variables numéricas a una misma escala, centrando cada una en su media y ajustándola según su desviación estándar. De este modo, todas las variables quedan comparables entre sí, evitando que aquellas con valores numéricamente mayores tengan más influencia en los análisis posteriores, especialmente en métodos multivariados como el análisis de componentes principales o el clustering.
+
+Un vistazo a los datos antes del escalamiento:
+
+```{r}
+head(hemo_data_1)
+```
+
+El comando `head(hemo_data_1)` muestra las primeras filas del objeto `hemo_data_1`. Su función es ofrecer una vista preliminar del contenido del data frame después de haber eliminado las variables categóricas y haber asignado la columna `id` como nombre de las filas. Esta visualización inicial permite verificar que las transformaciones previas se hayan aplicado correctamente y que los datos estén organizados de forma adecuada para los análisis posteriores.
+
+y un vistazo después del escalamiento:
+
+```{r}
+head(hemo_data_escalado)
+```
+
+**Interpretación**
+
+El resultado presentado corresponde a las primeras filas del objeto `hemo_data_escalado`, es decir, la versión estandarizada del conjunto de datos. Cada valor numérico representa un *z-score*, lo que significa que todas las variables han sido transformadas para tener media cero y desviación estándar igual a uno. En esta escala, los valores positivos indican que el paciente se encuentra por encima del promedio de la muestra, mientras que los valores negativos reflejan que está por debajo del promedio.
+
+La tabla permite verificar que el proceso de estandarización se aplicó correctamente a todas las variables clínicas, bioquímicas y urinarias del dataset. Además, se aprecia que los nombres de las filas coinciden con el identificador de cada paciente, lo que confirma que la estructura generada previamente (`hemo_data_1`) se mantuvo sin alteraciones. Esta vista inicial es útil para asegurarse de que la magnitud original de las variables ya no influirá en los análisis multivariados posteriores, permitiendo compararlas de forma equitativa dentro de métodos como PCA o clustering.
+
+## 1.4 Cálculo de distancias
+
+```{r}
+dist_hemo_data <- dist(hemo_data_escalado, method = "euclidean")
+```
+
+**Interpretación:**
+
+Se calcula la distancia euclidiana entre todos los pacientes incluidos en la base de datos, usando las variables que previamente fueron estandarizadas. Esta distancia actúa como un indicador de similitud clínica global: cuanto menor es la distancia entre dos pacientes, más parecidos son en su perfil bioquímico y fisiológico; cuanto mayor es, más diferentes son.
+
+El uso de los datos escalados garantiza que todas las variables contribuyan por igual al cálculo, evitando que aquellas con valores más altos de forma natural (como la urea o la creatinina) tengan un peso excesivo.
+
+El resultado es una matriz que resume cómo se relacionan los pacientes entre sí desde un punto de vista multivariado, y constituye un insumo esencial para análisis posteriores como el clustering jerárquico, k-means o la construcción de dendrogramas, donde estas distancias determinan la formación de grupos clínicamente interpretables
+
+## 1.4.1 (opcional) Visualizando las distancias euclidianas con un mapa de calor
+
+```{r}
+fviz_dist(dist_hemo_data)
+```
+
+**Interpretación:**
+
+El gráfico corresponde a un heatmap de distancias euclidianas entre los pacientes del estudio, calculadas a partir de todas las variables clínicas estandarizadas. Cada punto del mapa representa la distancia entre un paciente (eje vertical) y otro (eje horizontal). La escala de colores va de:
+
+-   Rojo: distancias pequeñas → pacientes muy similares.
+
+-   Azul: distancias grandes → pacientes muy diferentes.
+
+La diagonal roja que cruza el gráfico corresponde a la comparación de cada paciente consigo mismo, donde la distancia es cero.
+
+Podemos manifestara principales hallazgos:
+
+-   **Aparecen bloques definidos en tonos azulados (distancias grandes):** Estos bloques indican que ciertos grupos de pacientes presentan perfiles clínicos marcadamente distintos al resto de la población. Clínicamente, esto sugiere la presencia de subpoblaciones con características particulares, como mayor deterioro renal, diferencias en el nivel de anemia, alteraciones del metabolismo u otros marcadores bioquímicos.
+
+<!-- -->
+
+-   **Existen zonas en tonos rojizos entre algunos pacientes:** Las áreas más rojizas muestran grupos de pacientes que comparten valores clínicos similares. Esto puede corresponder a pacientes con un perfil más homogéneo, ya sea por estadio de enfermedad o por características clínicas comunes.
+
+<!-- -->
+
+-   **La presencia de dos zonas amplias más oscuras (azules) en forma de rectángulos:** Estas regiones indican que hay dos posibles clusters principales de pacientes cuyos perfiles son muy diferentes entre sí. Esto suele ser un indicio de que el análisis de clustering posterior (como k-means o clustering jerárquico) probablemente identificará dos o más grupos clínicamente diferenciables.
+
+<!-- -->
+
+-   **La mezcla dispersa de tonos claros en otras áreas:** Sugiere que, entre los demás pacientes, las diferencias no son tan marcadas, lo que indica una variabilidad moderada dentro de la población.
+
+## 1.5 El método de agrupamiento: función de enlace (linkage)
+
+```{r}
+dist_link_hemo_data <- hclust(d = dist_hemo_data, method = "ward.D2")
+```
+
+-   Lo que estamos haciendo es organizar a los pacientes según su similitud global, considerando todas sus variables clínicas y bioquímicas de manera conjunta. El método Ward.D2 intenta que cada grupo formado sea internamente coherente, es decir, que los pacientes de un mismo clúster realmente compartan características clínicas relevantes. Además, este método tiende a producir grupos separados de manera clara, lo cual facilita la interpretación médica posterior.
+
+## 1.6 Dendrogramas para la visualización de patrones
+
+Los dendrogramas es una representación gráfica del árbol jerárquico generado por la función `hclust()`.
+
+```{r}
+fviz_dend(dist_link_hemo_data, cex = 0.7)
+```
+
+**Interpretación:**
+
+-   El dendrograma muestra cómo los pacientes se agrupan según la similitud de sus parámetros clínicos y bioquímicos. Se observa una división clara en dos grandes grupos, lo que indica que existen dos perfiles clínicos bien diferenciados dentro de la población en hemodiálisis.
+
+-   Dentro de cada grupo principal aparecen subgrupos más pequeños, formados por pacientes con características aún más similares entre sí. En conjunto, el dendrograma evidencia que la muestra no es homogénea y que los pacientes presentan patrones clínicos diferenciados que pueden ser relevantes para el análisis y la interpretación clínica.
+
+## 1.7 ¿Cúantos grupos se formaron en el dendrograma?
+
+```{r}
+fviz_dend(dist_link_hemo_data, 
+          k = 3,
+          cex = 0.5,
+          k_colors = c("#2E9FDF", "#E7B800", "#FC4E07"),
+          color_labels_by_k = TRUE, 
+          rect = TRUE)
+```
+
+**Interpretación:**
+
+El dendrograma coloreado muestra la división de los pacientes en tres clústeres principales, cada uno identificado por un color distinto. Esta segmentación se basa en la similitud global de sus parámetros clínicos y bioquímicos, previamente estandarizados.
+
+El Cluster 1 (azul) reúne al grupo más numeroso y homogéneo de pacientes, caracterizado por presentar perfiles muy similares entre sí, lo que se refleja en las uniones a baja altura.\
+El Cluster 2 (amarillo) representa un subconjunto intermedio, cuyos pacientes comparten características clínicas diferenciadas tanto del grupo azul como del grupo rojo.\
+Finalmente, el Cluster 3 (rojo) corresponde a un grupo claramente separado, lo que sugiere un perfil clínico distinto y posiblemente más específico.
+
+La delimitación mediante rectángulos facilita visualizar cómo cada grupo está bien definido internamente y, al mismo tiempo, diferenciado del resto. En conjunto, este análisis confirma que la población estudiada no es uniforme y se organiza en tres perfiles clínicos bien diferenciados, lo cual puede ser útil para identificar patrones, estratificar a los pacientes o plantear nuevas hipótesis clínicas.
+
+# 2 Agrupamiento con el algoritmo K-Means
+
+## 2.1 El problema y dataset para este ejercicio
+
+Usaremos el mismo dataset y el mismo problema que el que empleamos en el ejercicio anterior (para Agrupamiento Jerárquico).
+
+## 2.2 Estimando el número óptimo de clusters
+
+Primero escalamos los datos:
+
+```{r}
+hemo_data_escalado = scale(hemo_data_1)
+```
+
+Se realiza la estandarización de todas las variables numéricas del conjunto de datos. Esto significa que cada variable es transformada para tener media 0 y desviación estándar 1. Este paso es fundamental porque evita que variables con magnitudes naturalmente mayores (como BUN, creatinina o fosfatasa alcalina) dominen el análisis. Al escalarlas, todas las variables aportan el mismo peso al cálculo de distancias y a los métodos de agrupamiento, permitiendo una comparación más justa entre los pacientes y una interpretación más fiable de los clústeres.
+
+Ahora graficamos la suma de cuadrados dentro de los gráficos
+
+```{r}
+fviz_nbclust(hemo_data_escalado, kmeans, nstart = 25, method = "wss") + 
+  geom_vline(xintercept = 3, linetype = 2)
+```
+
+**Interpretación:**
+
+El gráfico muestra el método del *Within Sum of Squares* (WSS), utilizado para determinar el número óptimo de clústeres. La curva evidencia una caída pronunciada entre 1 y 2 clústeres, seguida de una disminución menos marcada al pasar de 2 a 3. A partir del tercer clúster, la reducción del WSS se vuelve mínima, indicando que agregar más grupos ya no aporta una mejora significativa en la homogeneidad dentro de los clústeres.
+
+El punto donde la curva comienza a estabilizarse, marcado por la línea punteada, señala que k = 3 es el número óptimo de clústeres para esta población. Esto respalda la división en tres grupos clínicamente diferenciados, coherente con el dendrograma previamente analizado.
+
+## 2.3 Cálculo del agrupamiento k-means
+
+```{r}
+set.seed(123)
+km_res <- kmeans(hemo_data_escalado, 3, nstart = 25)
+```
+
+El análisis k-means con 3 clusters separó a las observaciones en tres grupos con perfiles hematológicos distintos. Cada cluster reúne datos que se parecen entre sí y se diferencian de los otros grupos. Esto permite identificar tres patrones o perfiles dentro del conjunto de variables hematológicas, como niveles más altos, intermedios o más bajos según el caso. En resumen, el algoritmo organizó automáticamente tus datos en tres tipos de perfiles hematológicos.
+
+```{r}
+km_res
+```
+
+**Interpretación:**
+
+El análisis k-means con 3 clusters mostró que las observaciones se organizan en tres perfiles clínicos diferenciados.
+
+**🔵 Cluster 1 (n = 50): Perfil intermedio / relativamente equilibrado.**\
+Los valores están cerca del promedio, con ligeras elevaciones en marcadores como PCR, GGT y algunos electrolitos urinarios. Podría representar un grupo sin alteraciones marcadas, con variaciones leves.
+
+**🟠** **Cluster 2 (n = 30): Perfil más alterado / mayor carga clínica.**\
+Este grupo tiene los valores más altos de inflamación (PCR), estrés metabólico (AST, ALT, GGT), función renal (BUN, creatinina), lípidos, glucosa, HbA1c y daño tubular (NAG, A1-microglobulina). Podría representar a los individuos con peor perfil metabólico, renal e inflamatorio.
+
+🟢 **Cluster 3 (n = 80): Perfil más saludable o bajo riesgo.**\
+Presenta valores más bajos en inflamación, daño hepático y renal, glucosa y electrolitos urinarios, junto con mejores niveles de HDL y hierro. Podría corresponder al grupo con mejores condiciones clínicas generales.
+
+## 2.4 Visualización de los clústeres k-means
+
+```{r}
+fviz_cluster(
+  km_res,
+  data = hemo_data_escalado,
+  palette = c("#2E9FDF", "#E7B800", "#FC4E07"),
+  ellipse.type = "euclid",
+  repel = TRUE,
+  ggtheme = theme_minimal()
+)
+```
+
+El gráfico de clusters muestra de forma visual cómo el algoritmo k-means separó los datos en tres grupos bien definidos. Cada color representa un cluster distinto, y las elipses euclidianas ayudan a identificar el “espacio” que ocupa cada grupo dentro de la variabilidad total de los datos. Se observa que los puntos dentro de cada cluster están relativamente juntos, lo que indica coherencia interna, mientras que los clusters se encuentran separados entre sí, reflejando diferencias claras en los perfiles clínicos.
+
+Se observa que los tres clusters están separados de manera evidente, lo que indica que los pacientes comparten características clínicas y bioquímicas similares dentro de cada grupo, pero difieren de los otros dos. La distancia entre las elipses refleja diferencias reales en los perfiles hematológicos y metabólicos de los pacientes.
+
+En conjunto, esta representación confirma que el modelo k-means logró una segmentación consistente y clínicamente interpretable, al agrupar a los pacientes según patrones comunes de sus variables bioquímicas, permitiendo distinguir claramente un perfil más comprometido, uno intermedio y otro más favorable.
+
+# Actividad usando la base "Diabetes"
+
+### Cargamos la base a usar
+
+```{r}
+diabetes = import(here("data", "data_diabetes_6.csv"))
+```
+
+Indica que se está importando un archivo llamado *data_diabetes_6.csv*, ubicado dentro de la carpeta *data*, utilizando la ruta construida automáticamente por la función `here()`. El archivo se carga en R como un data frame y se almacena en el objeto diabetes, que luego puede ser utilizado para análisis y manipulación de datos.
+
+*En este caso el análisis de agrupamiento herarquico se realizará con nuevos códigos para explorar si funcionan similar a los códigos usados en clases.*
+
+## **1. Seleccionar solo las variables numéricas**
+
+```{r}
+diabetes_num <- diabetes |> 
+  dplyr::select(where(is.numeric))
+```
+
+El comando crea un nuevo objeto llamado diabetes_num que contiene únicamente las variables numéricas del conjunto de datos original *diabetes*. Esto se logra utilizando la función `select()` junto con `where(is.numeric)`, que automáticamente identifica todas las columnas cuyo tipo de dato es numérico.
+
+El resultado es un data frame más compacto, sin variables categóricas como `Diabetes_5a`, `IMC_cat` o `Grupo_etario`. En su lugar, incluye solo variables como Núm_Embarazo, Glucosa_2h, Presión_Sanguínea, Pliegue_Tríceps, Insulina_2h, IMC, Historial_Diabetes y Edad, que corresponden a medidas continuas o discretas relevantes del paciente. Este nuevo data frame es más adecuado para procesos de normalización, cálculo de distancias y otras técnicas analíticas que se aplicarán posteriormente en el estudio.
+
+## 2. Estandarizar las variables
+
+```{r}
+diabetes_scaled <- scale(diabetes_num)
+```
+
+El código `diabetes_scaled <- scale(diabetes_num)` transforma todas las variables numéricas almacenadas en *diabetes_num* a una escala estandarizada, en la cual cada columna pasa a tener una media igual a 0 y una desviación estándar igual a 1. Este proceso, conocido como estandarización o normalización Z-score, es fundamental en los análisis de agrupamiento jerárquico, porque evita que variables con unidades o rangos muy grandes dominen la medida de distancia entre observaciones.
+
+En la base *diabetes*, variables como Glucosa_2h, IMC o Insulina_2h pueden tener valores muy distintos entre sí; sin estandarización, esas diferencias influirían desproporcionadamente en la formación de clústeres. Al aplicar `scale()`, todas las variables quedan en una escala comparable, permitiendo que el análisis jerárquico considere su contribución en igualdad de condiciones.
+
+El resultado esperado es un nuevo objeto llamado diabetes_scaled, que contiene la misma cantidad de filas que el dataset original, pero con todas las variables expresadas en valores estandarizados. Este objeto es el que se utiliza como entrada para calcular distancias y construir el dendrograma del clustering jerárquico, como el mostrado en la imagen previa.
+
+## 3. Matriz de distancias
+
+```{r}
+dist_matrix <- dist(diabetes_scaled, method = "euclidean")
+```
+
+Se calcula la distancia euclidiana entre todas las observaciones del dataset estandarizado *diabetes_scaled*. El resultado es una matriz de distancias, que indica qué tan similares o diferentes son los pacientes. Esta matriz es la base que el algoritmo utilizará para formar los clústeres en el análisis jerárquico
+
+## 4. Clustering jerárquico usando Ward.D2
+
+```{r}
+hc <- hclust(dist_matrix, method = "ward.D2")
+```
+
+El resultado, almacenado en `hc`, es una estructura que muestra cómo se agrupan progresivamente las observaciones según su similitud. El método *Ward.D2* forma clústeres buscando minimizar la variabilidad interna de cada grupo, por lo que los clústeres obtenidos suelen ser compactos y bien diferenciados. El objeto `hc` contiene la información necesaria para construir el dendrograma, donde se observa el orden en que las observaciones se combinan y la “altura” a la que se unen, lo cual refleja su nivel de disimilitud.
+
+## 5. Graficar el dendrograma
+
+```{r}
+plot(hc, 
+     labels = FALSE, 
+     hang = -1, 
+     main = "Dendrograma - Clustering Jerárquico",
+     xlab = "Observaciones",
+     ylab = "Distancia")
+```
+
+El código `plot(hc, ...)` genera un dendrograma que muestra visualmente cómo las observaciones del dataset se van agrupando según su similitud. En el eje horizontal aparecen las observaciones sin etiquetas, y en el eje vertical se representa la distancia o disimilitud a la que se fusionan los grupos.
+
+En el gráfico se observan varias ramas que se unen a diferentes alturas:
+
+-   **Ramas que se unen a baja distancia** indican observaciones muy similares.
+
+-   **Ramas que se unen a mayor distancia** representan grupos más distintos entre sí.
+
+## 6. Definir el número de clústeres
+
+```{r}
+k <- 3
+clusters <- cutree(hc, k = k)
+table(clusters)
+```
+
+El código divide el dendrograma en 3 clústeres y asigna cada observación al grupo correspondiente. La función `cutree()` realiza el corte en el nivel indicado y `table(clusters)` muestra cuántas observaciones quedaron en cada grupo.
+
+El resultado indica que:
+
+-   **Clúster 1:** 245 observaciones
+
+-   **Clúster 2:** 425 observaciones
+
+-   **Clúster 3:** 98 observaciones
+
+Esto significa que, al cortar el dendrograma en tres partes, los pacientes se agrupan en tres conjuntos de distinto tamaño, reflejando diferentes patrones de similitud en sus variables clínicas.
+
+## 7. Agregamos los clústeres a la data
+
+```{r}
+diabetes_clustered <- diabetes |> 
+  mutate(Cluster = clusters)
+```
+
+Se agrega al data frame original diabetes una nueva columna llamada Cluster, que contiene el número de clúster asignado a cada observación por el análisis jerárquico.
+
+El resultado es un dataset ampliado, diabetes_clustered, donde cada paciente conserva todas sus variables originales, pero ahora incluye también su pertenencia al clúster 1, 2 o 3. Esto permite comparar grupos, describir sus características y realizar análisis adicionales basados en la clasificación obtenida.
+
+## 8. Visualizamos la distribución de cada clúster
+
+```{r}
+table(diabetes_clustered$Cluster)
+```
+
+El comando `table(diabetes_clustered$Cluster)` muestra cuántas observaciones pertenecen a cada uno de los clústeres asignados. El resultado:
+
+-   **Clúster 1:** 245 casos
+
+-   **Clúster 2:** 425 casos
+
+-   **Clúster 3:** 98 casos
+
+Confirma la distribución final de los pacientes en los tres grupos formados por el análisis jerárquico. Esto permite visualizar rápidamente el tamaño de cada clúster y comprobar que el agrupamiento se realizó correctamente.

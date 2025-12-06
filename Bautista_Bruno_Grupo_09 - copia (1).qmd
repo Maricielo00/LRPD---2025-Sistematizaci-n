@@ -1,0 +1,410 @@
+---
+title: "Práctica Calificada 4 - Actividad 2"
+format: html
+editor: visual
+---
+
+# **PC 4 - Actividad 2**
+
+NOMBRE: Bautista Benites Bruno Edgar
+
+DOCENTE: Dr. Castro López Segundo Vicente
+
+CICLO: V
+
+## 1. Importación
+
+Se cargan las librerías here y rio. La primera permite manejar las rutas de los archivos dentro del proyecto de forma más ordenada y sin errores al mover carpetas, mientras que la segunda facilita la importación y exportación de datos en distintos formatos como Excel, CSV o SPSS.
+
+```{r}
+library(here)
+library(rio)
+```
+
+```{r}
+data_diabetes = import(here("data", "diabetes.csv"))
+```
+
+Este código importa el archivo “diabetes.csv” que está dentro de la carpeta “data” del proyecto, usando la ruta gestionada por here(), y guarda ese conjunto de datos en el objeto llamado data_diabetes para poder trabajar con él.
+
+## 2. Limpieza
+
+```{r}
+library(tidyverse)
+library(janitor)
+```
+
+```{r}
+names(data_diabetes)
+```
+
+Nos muestra los nombres de las columnas o variables que contiene el conjunto de datos data_diabetes, para saber cómo se llaman y qué información incluye cada una.
+
+```{r}
+data_diabetes_1 = clean_names(data_diabetes)
+```
+
+Se crea una nueva base llamada data_diabetes_1, en la que se limpian y estandarizan los nombres de las variables del conjunto de datos data_diabetes.
+
+```{r}
+names(data_diabetes_1)
+```
+
+Nos muestra los nombres de las variables del nuevo conjunto de datos data_diabetes_1, para verificar cómo quedaron después de haber sido limpiados y estandarizados.
+
+```{r}
+data_diabetes_2 <- rename(data_diabetes_1,
+    Núm_Embarazo = num_embarazos,
+    Glucosa_2h = glucosa_2h, 
+    Presión_Sanguínea = presion_sanguinea, 
+    Pliegue_Tríceps = pliegue_triceps, 
+    Insulina_2h = insulina_2h, 
+    IMC = imc, 
+    Historial_Diabetes = historial_diabetes, 
+    Edad = edad, 
+    Diabetes_5a = diabetes_5a)
+```
+
+En la base de datos data_diabetes_2 se cambian los nombres de las variables del conjunto data_diabetes_1 por otros más claros o con mejor formato
+
+```{r}
+names(data_diabetes_2)
+```
+
+Este código muestra los nombres de las variables del conjunto de datos data_diabetes_2, para confirmar que los cambios de nombre se realizaron correctamente.
+
+```{r}
+data_diabetes_3 = mutate_if(data_diabetes_2, is.character, list(~na_if(.,"")))
+```
+
+En data_diabetes_3 se reemplaza los valores vacíos (“”) por valores faltantes (NA) en todas las variables que son de tipo texto (character). Esto sirve para que R reconozca correctamente los datos ausentes durante el análisis.
+
+```{r}
+data_diabetes_3 |> count(Núm_Embarazo)
+data_diabetes_3 |> count(Glucosa_2h)
+data_diabetes_3 |> count(Presión_Sanguínea)
+data_diabetes_3 |> count(Pliegue_Tríceps)
+data_diabetes_3 |> count(Insulina_2h)
+data_diabetes_3 |> count(IMC)
+data_diabetes_3 |> count(Historial_Diabetes)
+data_diabetes_3 |> count(Edad)
+data_diabetes_3 |> count(Diabetes_5a)
+```
+
+Estos comandos cuentan cuántas veces aparece cada valor en cada una de las variables del conjunto de datos data_diabetes_3 (por ejemplo, en Núm_Embarazo, Glucosa_2h, IMC, etc.).
+
+#Corrección de variables
+
+```{r}
+data_diabetes_4 = data_diabetes_3 |>
+  mutate(
+    Diabetes_5a =
+      case_when(
+        Diabetes_5a == "negativo" ~ "Negativo",
+        Diabetes_5a == "positivo" ~ "Positivo",
+        TRUE ~ Diabetes_5a))
+```
+
+Se corrigen y uniformizan los valores de la variable Diabetes_5a: cambia las palabras “negativo” y “positivo” para que comiencen con mayúscula (“Negativo” y “Positivo”).
+
+```{r}
+data_diabetes_5 <- data_diabetes_4 %>%
+  mutate(
+    IMC_cat = case_when(
+      IMC < 18.5 ~ "Bajo peso",
+      IMC >= 18.5 & IMC < 25 ~ "Normal",
+      IMC >= 25 & IMC < 30 ~ "Sobrepeso",
+      IMC >= 30 & IMC < 35 ~ "Obesidad I",
+      IMC >= 35 & IMC < 40 ~ "Obesidad II",
+      IMC >= 40 ~ "Obesidad III",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  mutate(IMC_cat = factor(IMC_cat, 
+                          levels = c("Bajo peso", "Normal", "Sobrepeso", 
+                                     "Obesidad I", "Obesidad II", "Obesidad III")))
+```
+
+Se genera una nueva variable llamada IMC_cat (categoría del IMC). Esta variable clasifica a cada persona según su índice de masa corporal (IMC) en seis grupos: Bajo peso, Normal, Sobrepeso, Obesidad I, Obesidad II y Obesidad III. Luego, convierte esa variable en un factor ordenado, para que las categorías sigan un orden lógico al analizar o graficar los datos.
+
+```{r}
+data_diabetes_5 |> count(IMC_cat)
+```
+
+Este código cuenta cuántas personas hay en cada categoría del IMC (como Bajo peso, Normal, Sobrepeso, Obesidad I, etc.) dentro del conjunto de datos data_diabetes_5.
+
+#Colapso de variables
+
+```{r}
+data_diabetes_6 <- data_diabetes_5 %>%
+  mutate(
+    Grupo_etario = case_when(
+      Edad >= 18 & Edad <= 29 ~ "18-29",
+      Edad >= 30 & Edad <= 39 ~ "30-39",
+      Edad >= 40 & Edad <= 49 ~ "40-49",
+      Edad >= 50 & Edad <= 59 ~ "50-59",
+      Edad >= 60             ~ "60+",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  mutate(Grupo_etario = factor(Grupo_etario, 
+                             levels = c("18-29", "30-39", "40-49", "50-59", "60+")))
+```
+
+Se añade la variable Grupo_etario, que clasifica a las personas según su edad en cinco rangos: 18-29, 30-39, 40-49, 50-59 y 60+. Después, convierte esa variable en un factor ordenado para que los grupos de edad mantengan su secuencia correcta al analizar o representar los datos.
+
+```{r}
+data_diabetes_6 |> count(Grupo_etario)
+```
+
+Este código cuenta cuántas personas hay en cada grupo de edad dentro del conjunto de datos data_diabetes_6.
+
+#Descargamos la base limpia
+
+```{r}
+write.csv(data_diabetes_6, "data_diabetes_6.csv", row.names = FALSE)
+```
+
+Este código guarda el conjunto de datos data_diabetes_6 en un archivo llamado “data_diabetes_6.csv”, sin incluir los números de fila. Así se crea una copia del archivo final con todas las modificaciones realizadas, lista para compartir o usar en otros programas.
+
+------------------------------------------------------------------------
+
+-   *Se procede a usar el último data como el punto inicial para seguir con los nuevos modelos a trabajar.*
+
+Se importa el archivo “data_diabetes_6.csv” desde la carpeta data del proyecto y lo guarda en un nuevo objeto llamado diabetes, para poder trabajar nuevamente con esa base de datos en RStudio.
+
+```{r}
+diabetes = import(here("data", "data_diabetes_6.csv"))
+```
+
+## 3. Análisis descriptivo de datos
+
+```{r}
+library(skimr)
+```
+
+Este código carga la librería skimr, que permite generar resúmenes descriptivos completos y organizados de los datos.
+
+***a. Verificamos el contenido de nuestra estructura***
+
+```{r}
+str(diabetes)
+```
+
+Se muestra la estructura del conjunto de datos diabetes, indicando cuántas observaciones y variables tiene, los tipos de datos de cada variable (numérico, texto, factor, etc.) y algunos valores de ejemplo.
+
+***b. Estadísticas descriptivos generales por grupo de diabetes***
+
+```{r}
+diabetes %>%
+  group_by(Diabetes_5a) %>%
+  summarise(
+    n = n(),
+    Edad_prom = mean(Edad, na.rm = TRUE),
+    Edad_sd = sd(Edad, na.rm = TRUE),
+    Glucosa_prom = mean(Glucosa_2h, na.rm = TRUE),
+    Glucosa_sd = sd(Glucosa_2h, na.rm = TRUE),
+    IMC_prom = mean(IMC, na.rm = TRUE),
+    IMC_sd = sd(IMC, na.rm = TRUE),
+    Presion_prom = mean(Presión_Sanguínea, na.rm = TRUE),
+    Presion_sd = sd(Presión_Sanguínea, na.rm = TRUE)
+  )
+```
+
+Este código calcula resúmenes estadísticos del conjunto de datos diabetes, agrupando a las personas según su resultado de Diabetes_5a (Negativo o Positivo). Para cada grupo, muestra: - n: cantidad de personas. - Edad_prom / Edad_sd: promedio y desviación estándar de la edad. - Glucosa_prom / Glucosa_sd: promedio y desviación estándar de la glucosa. - IMC_prom / IMC_sd: promedio y desviación estándar del IMC. - Presion_prom / Presion_sd: promedio y desviación estándar de la presión sanguínea.
+
+***c. Gráficos descriptivos***
+
+```{r}
+# Histograma de la glucosa
+ggplot(diabetes, aes(x = Glucosa_2h)) +
+  geom_histogram(bins = 25, fill = "skyblue", color = "black") +
+  labs(title = "Distribución de glucosa a las 2 horas", 
+       x = "Glucosa (mg/dL)", 
+       y = "Frecuencia") +
+  theme_minimal()
+```
+
+Se observa que la mayoría tiene valores entre 90 y 130 mg/dL, lo que indica una tendencia central hacia niveles normales de glucosa, aunque también hay algunos casos con valores más altos (mayores de 150 mg/dL), lo que sugiere la presencia de individuos con hiperglucemia. En conjunto, la distribución es asimétrica hacia la derecha, reflejando que hay menos personas con valores muy elevados de glucosa.
+
+```{r}
+# Boxplot de glucosa según diagnóstico de diabetes
+ggplot(diabetes, aes(x = factor(Diabetes_5a), y = Glucosa_2h, fill = factor(Diabetes_5a))) +
+  geom_boxplot() +
+  labs(title = "Glucosa según diagnóstico de diabetes a 5 años",
+       x = "Diabetes a 5 años (0 = No, 1 = Sí)", 
+       y = "Glucosa (mg/dL)") +
+  theme_minimal()
+```
+
+Se observa que quienes fueron positivos presentan valores de glucosa más altos y una mayor dispersión, mientras que el grupo negativo tiene valores más bajos y concentrados. Esto sugiere una relación directa entre niveles elevados de glucosa y el desarrollo posterior de diabetes, apoyando la idea de que una glucosa alta es un factor de riesgo.
+
+```{r}
+# Gráfico de barras por grupo etario
+ggplot(diabetes, aes(x = Grupo_etario, fill = factor(Diabetes_5a))) +
+  geom_bar(position = "dodge") +
+  labs(title = "Distribución de diabetes por grupo etario",
+       x = "Grupo etario", 
+       y = "Frecuencia", 
+       fill = "Diabetes (5 años)") +
+  theme_minimal()
+```
+
+ENn este gráfico se observa que la mayor cantidad de participantes se concentra en el grupo de 18 a 29 años, donde predominan los casos negativos para diabetes. A medida que aumenta la edad, el número total de personas disminuye, pero la proporción de casos positivos tiende a ser más alta en los grupos mayores (especialmente desde los 40 años). Esto sugiere que la frecuencia de diabetes aumenta con la edad, lo cual es consistente con lo esperado clínicamente.
+
+## 4. Imputación de datos
+
+Instalamos y cargamos los paquetes
+
+```{r}
+install.packages("mice")
+install.packages("ggmice")
+```
+
+Este código instala dos herramientas para trabajar con datos incompletos: mice, que permite reemplazar valores faltantes mediante imputación múltiple, y ggmice, que ayuda a visualizar de forma clara cómo quedan esas imputaciones.
+
+```{r}
+library(mice)
+library(tidyverse)
+library(here)
+library(rio)
+library(ggmice)
+library(gtsummary)
+```
+
+1.  **Cargamos nuestra data**
+
+```{r}
+diabetes = import(here("data", "data_diabetes_6.csv"))
+```
+
+2.  **Revisar patrón de NA**
+
+```{r}
+md.pattern(diabetes)
+```
+
+**Interpretación:**
+
+El análisis del patrón de valores perdidos muestra que la mayoría de las variables del dataset no presentan datos faltantes, mientras que solo algunas tienen NA en diferentes combinaciones. Las variables con mayor cantidad de valores perdidos son:
+
+-   **Insulina_2h** (374 faltantes) → es la variable con más NA
+
+-   **Pliegue_Tríceps** (227 faltantes)
+
+-   **Presión_Sanguínea** (35 faltantes)
+
+-   **Glucosa_2h** (5 faltantes)
+
+Las demás variables están completas.
+
+También se observa que existen varios patrones distintos de ausencia, es decir, los casos no faltan todos de la misma manera: algunos registros no tienen *Insulina_2h*, otros no tienen *Pliegue_Tríceps*, y otros combinan ambas ausencias. Esto es típico en datos biomédicos y respalda la decisión de usar un método de imputación múltiple como mice, que maneja bien patrones incompletos complejos.
+
+```{r}
+colSums(is.na(diabetes))
+```
+
+**Interpretación:**
+
+El análisis del número de valores perdidos por variable muestra que la mayoría de columnas del dataset están completas, excepto algunas variables clínicas que presentan una cantidad importante de datos faltantes. Las variables con NA son:
+
+-   **Insulina_2h**: 374 valores faltantes → es la variable más incompleta.
+
+-   **Pliegue_Tríceps**: 227 valores faltantes.
+
+-   **Presión_Sanguínea**: 35 valores faltantes.
+
+-   **Glucosa_2h**: 5 valores faltantes.
+
+-   **IMC**: 11 valores faltantes.
+
+-   **IMC_cat**: 11 valores faltantes (esto es esperable porque depende directamente del IMC).
+
+Todas las demás variables, incluyendo **Núm_Embarazo**, **Historial_Diabetes**, **Edad**, **Diabetes_5a** y **Grupo_etario**, están completas (0 NA).
+
+En conjunto, esto indica que los datos faltantes se concentran únicamente en algunas variables antropométricas y bioquímicas, mientras que las variables demográficas y categóricas se encuentran completas. Este patrón es adecuado para realizar una imputación múltiple, especialmente usando métodos como pmm para las variables continuas.
+
+3.  **Configurar métodos de imputación**
+
+```{r}
+ini <- mice(diabetes, maxit = 0)
+metodos <- ini$method
+```
+
+Ese código inicializa el proceso de imputación y extrae la plantilla de métodos que luego ajustaremos para imputar correctamente cada variable.
+
+4.  **Variables numéricas imputables**
+
+```{r}
+metodos[c(
+  "Glucosa_2h",
+  "Presión_Sanguínea",
+  "Pliegue_Tríceps",
+  "Insulina_2h",
+  "IMC"
+)] <- "pmm"
+```
+
+Se identificaron valores faltantes (missing data) en variables clave para el análisis. Específicamente, las variables Glucosa a las 2h, Presión Sanguínea (diastólica), Pliegue del Tríceps, Insulina a las 2h e Índice de Masa Corporal (IMC) fueron designadas para la imputación. Para abordar este problema, se seleccionó el método de Predictive Mean Matching (PMM), un enfoque de imputación múltiple no paramétrico. La ventaja de PMM radica en que, en lugar de utilizar un valor predicho por regresión lineal (que puede generar valores fuera del rango original o irreales), asigna un valor observado real de la base de datos que pertenece al registro más similar.
+
+**4.1. Imputacion para variable objetivo si fuera necesario**
+
+```{r}
+metodos["Diabetes_5a"] <- "logreg"
+```
+
+-   La variable **`Diabetes_5a`** es, por su nombre, la variable de resultado (el *outcome*) que indica si un paciente desarrolló diabetes en un seguimiento de 5 años. En este tipo de estudios, esta variable suele ser binaria (por ejemplo, `0` para 'No' y `1` para 'Sí').
+
+-   Al asignarle el método **`logreg`** , se le está indicando al algoritmo de imputación (que generalmente utiliza el paquete `mice` de R) que la predicción y el relleno de cualquier valor faltante en esta columna se debe realizar a través de un modelo de regresión logística.
+
+**4.2. No imputar las derivadas/categóricas**
+
+```{r}
+metodos[c("IMC_cat", "Grupo_etario")] <- ""
+```
+
+-   **`IMC_cat` y `Grupo_etario`** son, por definición, variables categóricas que probablemente se derivaron (o se crearon) a partir de otras variables ya presentes en el *dataset* (por ejemplo, `IMC` y `Edad`). Si estas variables se construyeron correctamente a partir de variables que ya están siendo imputadas, no deberían tener valores faltantes (o los que tienen son un subproducto de los faltantes originales).
+
+-   Al usar `""`, se le está diciendo al algoritmo: "No te preocupes por rellenar valores aquí, pero usa la información del *Grupo etario* y la *Categoría de IMC* para hacer una mejor imputación de variables como `Glucosa_2h` o `Presión_Sanguínea`."
+
+5.  **Ejecutar imputación**
+
+```{r}
+imp <- mice(
+  diabetes,
+  method = metodos,
+  m = 5,
+  maxit = 20,
+  seed = 123
+)
+```
+
+Esta función ejecuta la imputación creando 5 versiones completas de la base de datos diabetes, utilizando los métodos específicos para cada variable y asegurando la estabilidad y reproducibilidad del proceso.
+
+6.  **Diagnóstico gráfico**
+
+```{r}
+ggmice(imp, aes(y = Insulina_2h))
+```
+
+**¿Qué muestra la gráfica?** Al ejecutar esta línea, generalmente se genera un gráfico de densidad superpuesto o un gráfico de stripplots (puntos dispersos) que compara la distribución de la variable Insulina_2h en los siguientes grupos:
+
+-   Datos Observados (Completos): La distribución original de los valores de Insulina_2h que sí estaban presentes.
+
+-   Datos Imputados (Faltantes): La distribución de los valores que fueron rellenados por el algoritmo PMM en las $m=5$ bases de datos generadas.
+
+7.  **Dataset imputado final**
+
+```{r}
+diabetes_final <- complete(imp)
+```
+
+El dataframe resultante, diabetes_final, es ahora una base de datos completa donde todas las filas que originalmente tenían NAs en las variables designadas (Glucosa_2h, Presión_Sanguínea, Insulina_2h, IMC, Pliegue_Tríceps, y Diabetes_5a) han sido rellenadas con los valores estimados por los métodos PMM y Regresión Logística.
+
+8.  **Visualizamos el resultado**
+
+```{r}
+head(diabetes_final)
+```
+
+Aplicando la función head() al dataframe diabetes_final que acabamos de crear con todos los valores faltantes imputados.

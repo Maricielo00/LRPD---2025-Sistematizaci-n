@@ -1,0 +1,81 @@
+---
+title: "TAREA PC1"
+format: html
+editor: visual
+autor: Ponce Maricielo
+---
+
+```{r}
+
+```
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+## TAREA FUNCIONES R Y PAQUETES
+
+Instalaremos los paquetes necesarios para realizar el trabajo
+
+```{r}
+install.packages("tidyverse")
+install.packages("rio")
+install.packages("here")
+install.packages("janitor")
+install.packages("skimr")
+install.packages("visdat")
+```
+
+```{r}
+library(here)
+library(rio)
+library(tidyverse)
+library(janitor)
+library(skimr)
+library(visdat)
+```
+
+```{r}
+diabetes = import(here("data2", "diabetes.csv"))
+```
+
+```{r}
+str(diabetes)
+diabetes$glucosa_2h
+```
+
+UTILIZAMOS ALGUNOS EJEMPLOS DE FUNCIONES
+
+## 1.-Promedio
+
+**1.1 Mediana: median(). Podemos obtener el valor central de un grupo de datos. Ej: Valor central de la glucosa**
+
+```{r}
+median(diabetes$glucosa_2h, na.rm = TRUE)
+```
+
+**1.5 Numero de datos: Length(). Cuenta el número total de pacientes registrados**
+
+```{r}
+length(diabetes$edad)
+```
+
+1.2Desviacion Estandar sd()
+
+```{r}
+sd(diabetes$num_embarazos)
+```
+
+## 2.-Sumatoria
+
+2.2 sumatoria de e: sum()
+
+```{r}
+sum(diabetes$edad)
+```
+
+## 4.-Frecuencia de datos repetidos
+
+```{r}
+table(diabetes$glucosa_2h)
+```

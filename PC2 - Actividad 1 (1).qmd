@@ -1,0 +1,268 @@
+---
+title: "PC2 - Actividad 1"
+author: Grupo 9
+format: html
+---
+
+## Práctica Calificada 2 - Actividad 1
+
+Para la actividad como data estaremos usando `data_diabetes`, la cuál en actividades pasadas ha sido filtrada.
+
+```{r}
+data_diabetes <- import(here("data", "data_diabetes_6.csv"))
+```
+
+## Actividad A - Proceso para crear gráficos descriptivos
+
+1.  **Cargamos los paquetes necesarios para la actividad**
+
+```{r}
+library(tidyverse)
+library(rio)
+library(here)
+library(gridExtra) ## Para múltiple gráficos en una sola página
+library(GGally) ## Para gráficos de correlación
+library(forcats)
+```
+
+2.  **Examinamos los datos de data_diabetes**
+
+```{r}
+str(data_diabetes)
+```
+
+Nos muestra datos sobre 768 pacientes, teniendo en cuenta 11 variables en referencia a diabetes mellitus.
+
+3.  **Conversion de carácteres a factores**
+
+```{r}
+data_diabetes_0 <- data_diabetes |> 
+  mutate_if(is.character, as.factor)
+str(data_diabetes_0)
+```
+
+4.  **Gráfico con variable categórica**
+
+Visualizamos la variable IMC_cat en un **gráfico de barras**, el primer gráfico nos muestra los datos de bajo peso, normal, obesidad I, II, III, sobrepeso y los datos vacios, sin mantener un orden. En la segunda gráfica, los valores se ordenan en forma decreciente. Y finalmente, en la tercera gráfica se estará dando un nombre a cada eje del gráfico y también con frecuencias, para que se pueda dar un mayor sentido al gráfico que se visualiza.
+
+```{r}
+data_diabetes_0 |>  
+  ggplot(aes(x = IMC_cat)) +
+  geom_bar()
+```
+
+```{r}
+data_diabetes_0 |>  
+  ggplot(aes(x = fct_infreq(IMC_cat))) +
+  geom_bar()
+```
+
+```{r}
+data_diabetes_0 |>  
+  ggplot(aes(x = IMC_cat, y = ..count../sum(after_stat(count)))) +
+  geom_bar() +
+  labs(y = "Frecuencia", x = "Categoría de IMC")
+```
+
+5.  **Gráficos con variables numéricas**
+
+a\. **Histograma**
+
+```{r}
+data_diabetes_0 |>  
+  ggplot(aes(x = Glucosa_2h)) +
+  geom_histogram() +
+  labs(y = "Frecuencia", x = "Glucosa a 2h (mg/dL)")
+```
+
+```{r}
+data_diabetes_0 |>  
+  ggplot(aes(x = Glucosa_2h)) +
+  geom_histogram(aes(y = ..density..)) +
+  labs(y = "Frecuencia", x = "Glucosa a 2h (mg/dL)")
+```
+
+```{r}
+hist_1 = data_diabetes_0 |> ggplot(aes(x = Glucosa_2h)) +
+  geom_histogram() +
+  labs(y = "Frecuencia", x = "Glucosa a 2h (mg/dL)")
+  
+hist_2 = data_diabetes_0 |> ggplot(aes(x = Glucosa_2h)) +
+  geom_histogram(aes(y = ..density..)) +
+  labs(y = "Frecuencia", x = "Glucosa a 2h (mg/dL)")
+```
+
+```{r}
+grid.arrange(hist_1, hist_2, ncol = 2)
+```
+
+Conteo con un número de barras distinto
+
+```{r}
+data_diabetes_0 |>  
+  ggplot(aes(x = Glucosa_2h)) +
+  geom_histogram(bins = 10) +
+  labs(y = "Frecuencia", x = "Glucosa a 2h (mg/dL)")
+```
+
+```{r}
+data_diabetes_0 |>  
+  ggplot(aes(x = Glucosa_2h)) +
+  geom_histogram(color = "black",
+    fill = "cornflowerblue"  ) +
+  labs(y = "Frecuencia", x = "Glucosa a 2h (mg/dL)")
+```
+
+b\. **Boxplots**
+
+```{r}
+data_diabetes_0 |> 
+  ggplot(aes(y = IMC)) + ## Cambia y por x para invertir el gráfico
+  geom_boxplot() +
+  theme(axis.text.x  = element_blank(),
+        axis.ticks.x = element_blank()) +
+  labs(y = "IMC")
+```
+
+```{r}
+box_album_base = boxplot(data_diabetes_0$IMC,
+                         ylab = "IMC",
+                         horizontal = TRUE, ## Cambia la dirección del gráfico
+                         col = "blue") ## Añadimos color
+  
+```
+
+6.  **Variable categórica vs numérica**
+
+```{r}
+data_diabetes_0 |> 
+  ggplot(aes(x = Diabetes_5a, fill = IMC)) +
+  geom_bar(position = "dodge") + ## Sin este argumento, las barras estarán una sobre otras
+  labs(y = "Frecuencia",  
+       x = "Dx de diabetes",
+       fill = "Desenlace")
+```
+
+```{r}
+data_diabetes_0 |>   
+  group_by(Diabetes_5a, IMC)  |>  
+  count() |>   
+  # Compute proportions within grade
+  # n is the default variable created by count()
+  group_by(Diabetes_5a) |>   
+  mutate(Proportion = n/sum(n))  |> 
+  ggplot(aes(x = Diabetes_5a, y = Proportion, fill = IMC)) +
+  geom_bar(position = 'dodge', stat = 'identity') +
+  labs(y = "Proportion",
+       x = "Dx de diabetes",
+       fill = "Desenlace")
+```
+
+```{r}
+addmargins(prop.table(
+  table(data_diabetes_0$IMC, data_diabetes_0$Diabetes_5a), 
+  margin = 2), 1)
+```
+
+7.  **Distribución de variables continuas versus categóricas**
+
+A. **Gráficos de barras**
+
+```{r}
+data_diabetes_0 |> 
+  filter(!is.na(Diabetes_5a) & !is.na(Grupo_etario)) |> 
+  group_by(Diabetes_5a, Grupo_etario) |> 
+  summarise(n = n(),
+            promedio = mean(Glucosa_2h, na.rm = T),
+            de = sd(Glucosa_2h, na.rm = T)) |> 
+  ggplot(aes(x = Diabetes_5a, y = promedio, fill = Grupo_etario)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_errorbar(aes(ymin = promedio - de, ymax = promedio + de),
+                width = 0.5, size = 0.75, position = position_dodge(0.9)) +
+  labs(y = "Glucosa a 2h (mg/dL)", fill = "Grupo etario", x = "Dx de diabetes")
+```
+
+B. **Boxplots lado a lado**
+
+```{r}
+data_diabetes_0 |>  
+  filter(!is.na(Glucosa_2h)& !is.na(Diabetes_5a))  |> 
+  ggplot(aes(y = Glucosa_2h, x = Diabetes_5a)) +
+  geom_boxplot() +
+  labs(y = "Glucosa a 2h (mg/dL)", x = "Dx de diabetes")
+```
+
+```{r}
+data_diabetes_0 |>  
+  filter(!is.na(Glucosa_2h)& !is.na(Diabetes_5a) & !is.na(Grupo_etario))  |> 
+  ggplot(aes(y = Glucosa_2h, x = Diabetes_5a, fill = Grupo_etario)) +
+  geom_boxplot() +
+  labs(y = "Glucosa a 2h (mg/dL)", x = "Dx de diabetes")
+```
+
+```{r}
+data_diabetes_0 |>  
+  filter(!is.na(Glucosa_2h)& !is.na(Diabetes_5a) & !is.na(Grupo_etario))  |>
+  ggplot(aes(y = Glucosa_2h, x = Grupo_etario, fill = Diabetes_5a)) +
+  geom_boxplot() +
+  labs(y = "Glucosa a 2h (mg/dL)", x = "Grupo etario")
+```
+
+8.  **Variables continuas versus continuas**
+
+```{r}
+data_diabetes_0 |> 
+  ggplot(aes(x = Glucosa_2h, y = IMC)) +
+  geom_point() +
+  labs(x = "Glucosa a las 2h (mg/dL)", y = "IMC")
+```
+
+```{r}
+data_diabetes_0 |> 
+  ggplot(aes(x = Glucosa_2h, y = IMC)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(x = "Glucosa a las 2h (mg/dL)", y = "IMC")
+```
+
+```{r}
+data_diabetes_0 |> 
+  ggplot(aes(x = Glucosa_2h, y = IMC)) +
+  geom_point() +
+  geom_smooth(stat = "smooth", se = TRUE) +
+  labs(x = "Glucosa a las 2h (mg/dL)", y = "IMC")
+```
+
+## Actividad B - Cálculo de tamaño de muestra
+
+```{r}
+library(epiR)
+```
+
+-   Registro usado como indicador: **`Diabetes_5a`** (valores: "Positivo"/"Negativo").
+
+-   N (población total) = **768** registros.
+
+-   Casos positivos en `Diabetes_5a` = **268** → proporción observada p^​≈0.349 (34.90 %).
+
+```{r}
+# Parámetros
+N <- 768           # población total
+p <- 0.349         # proporción observada (34.9%)
+d <- 0.05          # margen de error 5%
+Z <- 1.96          # para 95% de confianza
+```
+
+```{r}
+# Fórmula para población finita
+n <- (N * (Z^2) * p * (1 - p)) / ((d^2) * (N - 1) + (Z^2) * p * (1 - p))
+```
+
+El valor de n sale 240.23024492968
+
+```{r}
+# Redondear hacia arriba
+n_muestra <- ceiling(n)
+```
+
+El valor de n_muestra saldría 241
